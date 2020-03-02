@@ -1,0 +1,29 @@
+# Site settings
+baseURL = "/"
+title = ""
+languageCode = "en-us"
+timeout = 10000
+enableEmoji = true
+
+[markup]
+  [markup.highlight]
+    guessSyntax = false
+    hl_Lines = ""
+    lineNoStart = 1
+    lineNos = false
+    lineNumbersInTable = true
+    noClasses = true
+    style = "paraiso-dark"
+    tabWidth = 2
+
+# Logging Settings
+log = false
+logFile = ""
+verbose = false
+verboseLog = false
+
+#  build settings
+buildDrafts = false
+
+# serve settings
+watch = true

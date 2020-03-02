@@ -1,0 +1,6 @@
+{{ $styles := resources.Get "wing/dist/wing.css" }}
+<head>
+    {{ partial "meta.html" . }}
+    <title>{{ block "title" . }}{{ .Site.Title }}{{ end }}</title>
+    <link rel="stylesheet" href="{{ $styles.RelPermalink }}">
+</head>

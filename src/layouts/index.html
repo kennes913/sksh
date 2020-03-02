@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.LanguageCode }}">
+    {{- partial "header.html" . -}}
+    <body style="background-color:#f5f5f5;">
+        <br>
+        <div class="hero container text-center">
+            <img src="https://image.flaticon.com/icons/svg/737/737610.svg"
+                width="90" height="90" alt="Motherboard free icon"
+                title="Motherboard free icon">
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-2"></div>
+                <div class="col-8">
+                    <br>
+                    {{ range where .Site.RegularPages "Type" "posts" }}
+                    <div style="padding: 0.2em;">
+                        <a id="home_post_link"
+                            style="text-decoration:none;color:darkslateblue;"
+                            href="{{.Permalink}}">{{.Title}}</a>
+                        <span style="color:grey;float:right;">{{.Date.Format "2006-01-02"}}</span>
+                    </div>
+                    {{ end }}
+                </div>
+                <div class="col-2"></div>
+            </div>
+        </div>
+        {{- partial "footer.html" . -}}
+    </body>
+</html>

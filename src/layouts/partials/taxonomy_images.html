@@ -1,0 +1,24 @@
+<div class="hero container text-center">
+    {{ if eq .Title "python" }}
+    <img style="text-align:center"
+        src="https://image.flaticon.com/icons/svg/1387/1387537.svg"
+        width="100" height="100">
+    {{ else if eq .Title "bash" }}
+    <img src="https://image.flaticon.com/icons/svg/346/346841.svg" width="100"
+        height="100">
+    {{ else if eq .Title "data" }}
+    <img style="text-align:center"
+        src="https://image.flaticon.com/icons/svg/660/660478.svg"
+        width="100" height="100">
+    {{ else if eq .Title "databases" }}
+    <img style="text-align:center"
+        src="https://image.flaticon.com/icons/svg/660/660478.svg"
+        width="100" height="100">
+    {{ else if eq .Title "technology"}}
+    <img style="text-align:center"
+        src="https://image.flaticon.com/icons/svg/2426/2426715.svg"
+        width="100" height="100">
+    {{ else }}
+    <h1 style="text-align:center;font-weight: 200;font-size:3em;">{{ .Title | upper }}</h1>
+    {{ end }}
+</div>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.LanguageCode }}">
+    {{- partial "header.html" . -}}
+    <style>
+        p {font-family:monospace;}
+    </style>
+    <body>
+        <br>
+        <div style="font-family:monospace" class="container text-left">
+            -----BEGIN PGP PUBLIC KEY BLOCK-----
+            {{ .Content }}
+            -----END PGP PUBLIC KEY BLOCK-----
+        </div>
+    </body>
+</html>

@@ -1,0 +1,26 @@
+{{ $utilities := resources.Get "js/responsive_helpers.js" }}
+<footer class="container center">
+    <div class="row">
+        {{ if .IsHome  }}
+            <div class="col-2"></div>
+            <div class="col-8 text-right">
+                <hr>
+                {{- partial "links.html" -}}
+            </div>
+            <div class="col-2"></div>
+        {{ else if eq .Kind "taxonomy"}}
+        <div class="col-2"></div>
+        <div class="col-8 text-right">
+            <hr>
+            {{- partial "links.html" -}}
+        </div>
+        <div class="col-2"></div>
+        {{ else }}
+            <div class="col-12 text-right">
+                <hr>
+                {{- partial "links.html" -}}
+            </div>
+        {{ end }}
+    </div>
+<script type='text/javascript' src="{{ $utilities.Permalink }}"></script>
+</footer>
