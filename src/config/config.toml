@@ -13,7 +13,7 @@ enableEmoji = true
     lineNos = false
     lineNumbersInTable = true
     noClasses = true
-    style = "paraiso-dark"
+    style = "monokailight"
     tabWidth = 2
 
 # Logging Settings

@@ -1,3 +1,4 @@
-[submodule "src/assets/wing"]
-	path = src/assets/wing
+
+[submodule "src/assets/css/wing"]
+	path = src/assets/css/wing
 	url = git@github.com:kbrsh/wing.git

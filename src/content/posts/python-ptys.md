@@ -7,20 +7,20 @@ categories: ["post"]
 ---
 One task I do almost daily is trasferring data over a network. Due to customer requirements, this usually means moving data from SFTP to SFTP.
 
-There are a lot of ways to do this. Some solutions I've implemented or reviewed are: manual CLI calls to sftp, shell scripts to automate SCP calls, python scripts calling modules with dependencies on [Paramiko](https://github.com/paramiko/paramiko).
+There are a lot of ways to do this. Some solutions I've implemented or reviewed are: manual CLI calls to sftp, shell scripts to automate scp calls, python scripts calling modules with dependencies on [Paramiko](https://github.com/paramiko/paramiko).
 
 
 Why only python and bash? For productivity, development ease and team familiarity. I've never tried this in a compiled language but I'm sure there would be performance improvements at the expense of time.
 
-With that said, Python and Bash have their downsides. Bash does not have the features you get from a programming language: logical constructs, flow control and "readability". With Python, you lose the speed you get from Bash because you're a few abstraction layers up before the scp binary call is made and the most popular pythonic SFTP interface  [Paramiko is slow](https://github.com/paramiko/paramiko/issues/175).
+With that said, Python and Bash have their downsides. Bash does not have the features you get from a programming language: logical constructs, flow control and "readability". With Python, you lose the speed you get from Bash because you're a few abstraction layers up before the scp binary call is made and the most supported python SFTP module [Paramiko is slow](https://github.com/paramiko/paramiko/issues/175).
 
 Enter [pexpect](https://github.com/pexpect/pexpect). Pexpect is a pure python module that allows users to spawn and control applications that are forked `ptys`. It is the Python interface to `expect`.
 
-In this case, pexpect is a nice middle ground between speed and readability because python is only responsible for spawning and interacting with the I/O of the forked process rather than the core interface to SCP. And you still get the same speed because you're calling SCP.
+In this case, pexpect is a nice middle ground between speed and readability because python is only responsible for spawning and interacting with the I/O of the forked process rather than acting as the interface to scp. And you still get the same speed because you're calling SCP.
 
-Below is a sample snippet from a script. This simply transfers some specified local files onto a remote SFTP server.
+Below is a sample snippet from a script:
 
-{{< highlight python "hl_lines=29" >}}
+{{< highlight python "hl_lines=30" >}}
 ...
 @log
 def put(
@@ -76,35 +76,37 @@ if __name__ == "__main__":
         )
 {{< /highlight >}}
 
-The highlighted line contains regex patterns to expect during the forked scp process including cases such as authentication, trusted host verification and line break characters for logging.
+This above snippet transfers some specified local files onto a remote SFTP server.
 
-`scp_put` is a generator yielding back the standard out of the previous line either logging it or having it handled in one of the above cases.
+At a high level, `put` is a generator yielding back the standard out of each line in the forked process logging the line and or handling situations that would halt the scp process.
+
+The highlighted line contains regex patterns to `expect` from the forked process standard out. These patterns correspond to actions that require user input and will halt the scp transfer process if they are not dealt with. In this case, those halting processes are authentication and trusted host verification. The `\n` pattern ensures that each line is `yield`ed and passed to a python logger.
 
 Here is some log output from the above process:
 
 {{< highlight bash >}}
-19:52:38 pty | 2020-02-09 19:52:38.640 | debug1: Authentication succeeded (keyboard-interactive).
-19:52:38 pty | 2020-02-09 19:52:38.640 | Authenticated to super.secure.host.com ([10.32.0.111]:22).
-19:52:38 pty | 2020-02-09 19:52:38.641 | debug1: channel 0: new [client-session]
-19:52:38 pty | 2020-02-09 19:52:38.641 | debug1: Entering interactive session.
-19:52:38 pty | 2020-02-09 19:52:38.641 | debug1: pledge: network
-19:52:38 pty | 2020-02-09 19:52:38.642 | debug1: Sending environment.
-19:52:38 pty | 2020-02-09 19:52:38.642 | debug1: Sending env LANG = en_US.UTF-8
-19:52:38 pty | 2020-02-09 19:52:38.642 | debug1: Sending command: scp -v -p -t some_file.csv
-19:52:38 pty | 2020-02-09 19:52:38.687 | File mtime 1581277956 atime 1581277956
-19:52:38 pty | 2020-02-09 19:52:38.687 | Sending file timestamps: T1581277956 0 1581277956 0
-19:52:38 pty | 2020-02-09 19:52:38.688 | Sending file modes: C0644 2670 some_file.csv
-19:52:39 pty | 2020-02-09 19:52:39.028 |
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.640 | debug1: Authentication succeeded (keyboard-interactive).
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.640 | Authenticated to super.secure.host.com ([10.32.0.111]:22).
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.641 | debug1: channel 0: new [client-session]
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.641 | debug1: Entering interactive session.
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.641 | debug1: pledge: network
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.642 | debug1: Sending environment.
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.642 | debug1: Sending env LANG = en_US.UTF-8
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.642 | debug1: Sending command: scp -v -p -t some_file.csv
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.687 | File mtime 1581277956 atime 1581277956
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.687 | Sending file timestamps: T1581277956 0 1581277956 0
+19:52:38 forked.pty.process | 2020-02-09 19:52:38.688 | Sending file modes: C0644 2670 some_file.csv
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.028 |
 some_file.csv                     0%    0     0.0KB/s   --:-- ETA
 some_file.csv                   100% 2670     8.0KB/s   00:00
-19:52:39 pty | 2020-02-09 19:52:39.029 | debug1: client_input_channel_req: channel 0 rtype exit-status reply 0
-19:52:39 pty | 2020-02-09 19:52:39.071 | debug1: channel 0: free: client-session, nchannels 1
-19:52:39 pty | 2020-02-09 19:52:39.072 | debug1: fd 0 clearing O_NONBLOCK
-19:52:39 pty | 2020-02-09 19:52:39.072 | debug1: fd 1 clearing O_NONBLOCK
-19:52:39 pty | 2020-02-09 19:52:39.072 | Transferred: sent 5744, received 2688 bytes, in 0.4 seconds
-19:52:39 pty | 2020-02-09 19:52:39.072 | Bytes per second: sent 13346.0, received 6245.5
-19:52:39 pty | 2020-02-09 19:52:39.072 | debug1: Exit status 0
-19:52:39 pty | 2020-02-09 19:52:39.073 | File transfer complete. Closing pexpect.spawn().
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.029 | debug1: client_input_channel_req: channel 0 rtype exit-status reply 0
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.071 | debug1: channel 0: free: client-session, nchannels 1
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.072 | debug1: fd 0 clearing O_NONBLOCK
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.072 | debug1: fd 1 clearing O_NONBLOCK
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.072 | Transferred: sent 5744, received 2688 bytes, in 0.4 seconds
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.072 | Bytes per second: sent 13346.0, received 6245.5
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.072 | debug1: Exit status 0
+19:52:39 forked.pty.process | 2020-02-09 19:52:39.073 | File transfer complete. Closing pexpect.spawn().
 {{< /highlight >}}
 
-Pretty neat.
+Simple, readable and neat.
