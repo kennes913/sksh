@@ -12,13 +12,13 @@ There are a lot of ways to do this. Some solutions I've implemented or reviewed 
 
 Why only python and bash? For productivity, development ease and team familiarity. I've never tried this in a compiled language but I'm sure there would be performance improvements at the expense of time.
 
-With that said, Python and Bash have their downsides. Bash does not have the features you get from a programming language: logical constructs, flow control and "readability". With Python, you lose the speed you get from Bash because you're a few abstraction layers up before the scp binary call is made and the most supported python SFTP module [Paramiko is slow](https://github.com/paramiko/paramiko/issues/175).
+With that said, Python and Bash have their downsides. Bash logical constructs and flow control are more clunky which makes scripts less readable and more tedious to write. With python, you gain readability and lose speed. Python becomes an additional layer of software between the user and the low level system calls required for scp functionality. Additionally, the most supported python SFTP module [Paramiko is slow](https://github.com/paramiko/paramiko/issues/175).
 
-Enter [pexpect](https://github.com/pexpect/pexpect). Pexpect is a pure python module that allows users to spawn and control applications that are forked `ptys`. It is the Python interface to `expect`.
+Enter [pexpect](https://github.com/pexpect/pexpect). Pexpect is a pure python module that allows users to spawn and control applications that are forked `ptys`. It is the python interface to `expect`.
 
-In this case, pexpect is a nice middle ground between speed and readability because python is only responsible for spawning and interacting with the I/O of the forked process rather than acting as the interface to scp. And you still get the same speed because you're calling SCP.
+In this case, pexpect is a nice middle ground between speed and readability because python is only responsible for spawning and interacting with the I/O of the forked process rather than acting as the interface to scp. And you still get the same speed because you're calling the scp binary.
 
-Below is a sample snippet from a script:
+This snippet transfers some specified local files onto a remote SFTP server:
 
 {{< highlight python "hl_lines=30" >}}
 ...
@@ -75,8 +75,6 @@ if __name__ == "__main__":
             password=sig.get("password"),
         )
 {{< /highlight >}}
-
-This above snippet transfers some specified local files onto a remote SFTP server.
 
 At a high level, `put` is a generator yielding back the standard out of each line in the forked process logging the line and or handling situations that would halt the scp process.
 
