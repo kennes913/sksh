@@ -10,7 +10,7 @@ One task I do almost daily is trasferring data over a network. Due to customer r
 There are a lot of ways to do this. Some solutions I've implemented or reviewed are: manual CLI calls to sftp, shell scripts to automate scp calls, python scripts calling modules with dependencies on [Paramiko](https://github.com/paramiko/paramiko).
 
 
-Why only python and bash? For productivity, development ease and team familiarity. I've never tried this in a compiled language but I'm sure there would be performance improvements at the expense of time.
+Why only python and bash? For productivity, development ease and team familiarity. I've never tried this in a compiled language but I'm sure there would be performance improvements at the expense of development time.
 
 With that said, Python and Bash have their downsides. Bash logical constructs and flow control are more clunky which makes scripts less readable and more tedious to write. With python, you gain readability and lose speed. Python becomes an additional layer of software between the user and the low level system calls required for scp functionality. Additionally, the most supported python SFTP module [Paramiko is slow](https://github.com/paramiko/paramiko/issues/175).
 
