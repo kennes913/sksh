@@ -143,11 +143,11 @@ IPython 7.9.0 -- An enhanced Interactive Python. Type '?' for help.
 2020-07-15 21:50:24.464 | INFO | pkg.baz: This is an INFO statement.
 {{< /highlight >}}
 
-All of the messages are formatted according to the central configurations `"lib"` logging formatter and what was output were only the `INFO` level messages. After activating `pkg.bar` and `pkg.baz`'s loggers, only their messages we're output and following that, `pkg.foo`'s logger was activated so all 3 loggers eventually output statements. I then "deactivated" all of them and the logging went silent.
+All of the messages are formatted according to the central configuration logging formatter and they were `INFO` level messagse. After activating `pkg.bar` and `pkg.baz` loggers, logger messages from only those specific loggers output. Next, I activated the `pkg.foo` logger and on the next call to each `run_statements()` function, all 3 loggers output statements. Using `deactivate_stream_log`, I deactivated all loggers and the logging went silent.
 
-What's going on here is that I'm selectively choosing what module's logger I want to see messages from at some given point in execution. Why is this useful? Because it allows the developer to choose what modules they want to debug with finer-grained control. Often packages will contain a lot of modules, so that when you run `getLogger("some.module")`, you're often getting only a single module's logging which can sometimes be noisy and unhelpful depending on the implementation. The pattern above allows you to tune into the statements that matter to you during runtime debugging/inspection.
+What's going on here is that I'm selectively choosing what logger(s) to stream to standard out. Why is this useful? Because this functionality gives the developer the ability to choose what modules they want to debug during runtime. Often imported dependencies contain lots of modules and when you run `getLogger("some.module")`, you often get logging statements from modules and packages you do not want. Of course, this depends on how the packages logging was implemented, but I've run into this annoyance before several times. The above pattern allows you to tune into the statements that matter to you during runtime debugging/inspection.
 
-We're able to do this by mutating the handlers attribute on specific loggers within the hierarchy of loggers stored in the `logging.root.manager` object. This object is responsible for building the logging hierarchy and holds all of the loggers that have been initialized during the runtime of your program. By accessing the `manager.loggerDict`, I can build different types of handlers -- in this case a `logging.StreamHandler` -- and append and pop this from the list of handlers attached to specific loggers. Here's what that object looks like in this script:
+ I was able to do this by mutating the handlers attribute on specific loggers within the hierarchy of loggers stored in the `logging.root.manager` object. This object is responsible for building the logging hierarchy and holds all of the loggers that have been initialized during the runtime of your program. By accessing the `manager.loggerDict`, I can build different types of handlers -- in this case a `logging.StreamHandler` -- and append and pop this from the list of handlers attached to specific loggers. Here's what that object looks like in this script:
 
 {{< highlight python >}}
 In [1]: logging.root.manager.loggerDict
@@ -179,43 +179,54 @@ pkg.bar [<NullHandler (NOTSET)>, <StreamHandler <stdout> (NOTSET)>]
 pkg.baz [<NullHandler (NOTSET)>, <StreamHandler <stdout> (NOTSET)>]
 {{< /highlight >}}
 
-I mentioned I'd talk about the central logging configuration. There's plenty of documentation on this, but at a high level, this configuration builds relationships between logging formatters, handlers and behavior. Our configuration is loaded into each module's logger and when the logging hierarchy is built, `logging.root.manager` uses this configuration to instantiate`logging.Logger` objects with some of these settings.
+I mentioned I'd talk about the central logging configuration. There's plenty of [documentation](https://docs.python.org/3/library/logging.config.html) on the `logging.config` object, but at a high level, this configuration ties logger objects to logging formatters and handlers. Our configuration is loaded into each module's logger:
 
-That's why the messages are formatted a specific way and are at a specific `INFO` log level. If we were to set the message level to `DEBUG`, you would see both `INFO` and `DEBUG` statements:
 
 {{< highlight python >}}
-Python 3.7.5 (default, Nov 13 2019, 22:50:53)
-Type 'copyright', 'credits' or 'license' for more information
-IPython 7.9.0 -- An enhanced Interactive Python. Type '?' for help.
-2020-07-16 16:13:45.854 | INFO | pkg.bar: This is an INFO statement.
-2020-07-16 16:13:45.854 | DEBUG | pkg.bar: This is a DEBUG statement.
-2020-07-16 16:13:45.854 | INFO | pkg.baz: This is an INFO statement.
-2020-07-16 16:13:45.854 | DEBUG | pkg.baz: This is a DEBUG statement.
-2020-07-16 16:13:45.854 | INFO | pkg.foo: This is an INFO statement.
-2020-07-16 16:13:45.854 | DEBUG | pkg.foo: This is a DEBUG statement.
-2020-07-16 16:13:45.854 | INFO | pkg.bar: This is an INFO statement.
-2020-07-16 16:13:45.854 | DEBUG | pkg.bar: This is a DEBUG statement.
-2020-07-16 16:13:45.854 | INFO | pkg.baz: This is an INFO statement.
-2020-07-16 16:13:45.854 | DEBUG | pkg.baz: This is a DEBUG statement.
+# pkg.foo, bar, baz
+logging.config.dictConfig(config.configuration.get("logging"))
 {{< /highlight >}}
 
-And for a little but of fun -- another way to do this, would be to directly modify the logger level itself via:
+And when the logging hierarchy is built, `logging.root.manager` uses this configuration to instantiate `logging.Logger` objects. This is how the formatter and log level are assigned to the loggers and this affects how the messages are displayed to the user. Modifying formatters, log levels and handlers controls how the messages will be displayed to the user.
+
+You can modify the log level and formatter in a few ways. First, directly in the configuration:
 
 {{< highlight python >}}
 ...
-logging.root.manager.loggerDict.get("pkg.foo").setLevel(logging.INFO)
-logging.root.manager.loggerDict.get("pkg.bar").setLevel(logging.INFO)
-logging.root.manager.loggerDict.get("pkg.baz").setLevel(logging.INFO)
+            "lib": {
+                "class": "logging.Formatter",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+                "format": "%(asctime)s.%(msecs)03d | %(levelname)s | %(name)s: %(message)s",
+            },
+        },
+...
+        },
+        "loggers": {
+            "pkg.foo": {"handlers": ["null"], "level": "INFO"},
+            "pkg.bar": {"handlers": ["null"], "level": "INFO"},
+            "pkg.baz": {"handlers": ["null"], "level": "INFO"}
+        },
 {{< /highlight >}}
 
-So in addtion to your on and off switch, you can browse channels (kinda) when you're module's logging is activated.
+Another way to do this would be to modify these things through the manager object:
 
-Before ending the post, I want to talk briefly about how the messages arrive to your terminal. This happens through `logging.Handler` objects. In general, a `logging.Handler` object is responsible for taking a `LogRecord` object (the message), filtering and outputting it.
-As I mentioned earlier, I added a `logging.StreamHandler` object to each module logger and this handler is responsible for logging the messages to standard out.
+{{< highlight python >}}
+...
+# change log level
+logging.root.manager.loggerDict.get("pkg.foo").setLevel(logging.DEBUG)
+logging.root.manager.loggerDict.get("pkg.bar").setLevel(logging.DEBUG)
+logging.root.manager.loggerDict.get("pkg.baz").setLevel(logging.DEBUG)
 
-At a high level, when a logger `.log()`s a message, each of the handlers' `.handle()` method is called ([source code here](https://github.com/python/cpython/blob/master/Lib/logging/__init__.py#L1651-#L1679)) and eventually our `logging.StreamHandler` is called outputting the message into our terminal for that specific module.
+# change formatter
+for h in logging.root.manager.loggerDict.get("pkg.foo").handlers:
+    h.setFormatter(your_formatter)
+{{< /highlight >}}
 
-There's a lot more to the logging library that's beyond scope of this post, but in general, consider setting up fine-tuned logging controls for your applications and scripts through clever ways of activating and deactivating loggers.
+There are many other ways to do this. You'll have to explore which way works best for you. YMMV.
+
+Before ending the post, I want to talk briefly about how the messages arrive to your terminal. This happens through `logging.Handler` objects. When a logger object logs a message, each handler attached to that log, calls a `.handle()` method ([source code here](https://github.com/python/cpython/blob/master/Lib/logging/__init__.py#L1651-#L1679)). In our case, the `logging.NullHandler` gets called followed by the newly added `logging.StreamHandler` which outputs the message to our terminal. You can add any number of handlers to your logger logging each message to wherever the `.handle` method sends those log messages.
+
+There's a lot more to the logging library than I've described here, but in general, consider setting up fine-tuned logging controls for your applications and scripts through clever ways of activating and deactivating loggers.
 
 
 
