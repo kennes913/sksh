@@ -16,10 +16,10 @@ run_certbot:
 	echo 'Renewing TLS certs';
 
 	systemctl stop nginx;
-	systemctl start nginx;
 	certbot renew;
 	cp -r /etc/letsencrypt/ letsencrypt;
 	cp /etc/nginx/sites-available/default le.sksh.nginx.conf;
+	systemctl stop nginx;
 
 	# Modify le.sksh.nginx.conf to add error page
 	
